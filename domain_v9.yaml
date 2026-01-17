@@ -1,0 +1,28 @@
+apiVersion: weblogic.oracle/v9
+kind: Domain
+metadata:
+  name: helloworld-domain
+  namespace: weblogic
+spec:
+  domainUID: helloworld-domain
+
+  domainHomeSourceType: Image
+  image: ghcr.io/silhouetteua/weblogic-helloworld:1.0
+  imagePullPolicy: Never
+
+  webLogicCredentialsSecret:
+    name: weblogic-credentials
+
+  includeServerOutInPodLog: true
+
+  adminServer:
+    serverStartPolicy: IfNeeded
+    adminService:
+      channels:
+        - channelName: default
+          nodePort: 30701
+
+  # clusters:
+  #   - clusterName: cluster-1
+  #     serverStartPolicy: IF_NEEDED
+  #     replicas: 1
