@@ -1,0 +1,178 @@
+./create-rcu-credentials.sh \
+  -u schema \
+  -p schemapassword \
+  -a SYS \
+  -q Welcome1! \
+  -d soainfra \
+  -n soans \
+  -s soainfra-rcu-credential
+
+
+
+kubectl -n soans create secret generic oracle-rcu-secret \
+  --from-literal='sys_username=SYS' \
+  --from-literal='sys_password=Welcome1!' \
+  --from-literal='password=schemapassword'
+
+
+./create-rcu-schema.sh \
+  -s schema \
+  -t soaosb \
+  -d oracle-db.soans.svc.cluster.local:1521/XEPDB1 \
+  -n soans \
+  -c oracle-rcu-secret \
+  -i container-registry.oracle.com/middleware/soasuite:14.1.2.0-jdk21-ol8-241205 \
+  -r SOA_PROFILE_TYPE=SMALL,HEALTHCARE_INTEGRATION=NO
+[INFO] Calling '/home/jay/kwo-poc/SOA-domain-in-PV/soa_25.4.2/fmw-kubernetes/OracleSOASuite/kubernetes/create-rcu-schema/common/create-rcu-pod.sh -n soans  -c oracle-rcu-secret -i container-registry.oracle.com/middleware/soasuite:14.1.2.0-jdk21-ol8-241205'
+[INFO] Pod already exists. Skipping creation.
+[rcu] already initialized .. 
+Checking Pod READY column for State [1/1]
+NAME   READY   STATUS    RESTARTS   AGE
+rcu    1/1     Running   0          2m9s
+[INFO] Copying 'dropRepository.sh' and 'createRepository.sh' into the '/u01/oracle' directory in pod 'rcu'.
+NAME   READY   STATUS    RESTARTS   AGE
+rcu    1/1     Running   0          2m15s
+[INFO] Pod 'rcu' is running in namespace 'soans'
+CLASSPATH=:/u01/oracle/wlserver/modules/features/wlst.wls.classpath.jar:
+
+PATH=/u01/oracle/wlserver/server/bin:/u01/oracle/wlserver/../oracle_common/modules/thirdparty/org.apache.ant/apache-ant/bin:/u01/jdk/bin:/u01/jdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/u01/jdk/bin:/u01/oracle/oracle_common/common/bin:/u01/oracle/wlserver/common/bin:/u01/oracle:/u01/oracle/container-scripts:/u01/oracle/oracle_common/modules/thirdparty/org.apache.ant/1.10.5.0.0/apache-ant-1.10.5/bin
+
+Your environment has been set.
+Check if the DB Service is ready to accept request 
+DB Connection String [oracle-db.soans.svc.cluster.local:1521/XEPDB1], schemaPrefix [schema] rcuType [soaosb] customVariables [SOA_PROFILE_TYPE=SMALL,HEALTHCARE_INTEGRATION=NO], databaseType [ORACLE]
+
+**** Success!!! ****
+
+You can connect to the database in your app using:
+
+  java.util.Properties props = new java.util.Properties();
+  props.put("user", "SYS as sysdba");
+  props.put("password", "****");
+  java.sql.Driver d =
+    Class.forName("oracle.jdbc.OracleDriver").newInstance();
+  java.sql.Connection conn =
+    Driver.connect("SYS as sysdba", props);
+Creating RCU Schema for OracleSOASuite Domain ...
+Extra RCU Schema Component Choosen[-component SOAINFRA -component ESS]
+Extra RCU Schema Variable Choosen[-variables SOA_PROFILE_TYPE=SMALL,HEALTHCARE_INTEGRATION=NO]
+DatabaseType value Choosen -databaseType ORACLE
+
+        RCU Logfile: /tmp/RCU2026-01-30_15-56_456361000/logs/rcu.log
+
+Enter the database password(User:SYS):
+ 
+
+Processing command line ....
+DB TYPE : ORACLE
+Repository Creation Utility - Checking Prerequisites
+Checking Global Prerequisites
+The selected database is an Oracle XE Edition database, which is not certified for use in an Oracle Fusion Middleware production environment. For a list of certified databases, refer to the Supported System Configurations information on the Oracle Technology Network.
+The selected database is more recent than the supported list of certified databases for this version of Oracle Fusion Middleware. For the most recent list of certified databases, refer to the Supported System Configurations information on the Oracle Technology Network.
+Silent RCU Model , DB TYPE :  ORACLE
+Enter the schema password. This password will be used for all schema users of following components:SOAINFRA,ESS,MDS,IAU,IAU_APPEND,IAU_VIEWER,OPSS,WLS,STB,UCSUMS.
+ 
+
+Repository Creation Utility - Checking Prerequisites
+Checking Component Prerequisites
+Repository Creation Utility - Creating Tablespaces
+Validating and Creating Tablespaces
+Create tablespaces in the repository database
+Repository Creation Utility - Create
+Repository Create in progress.
+        Percent Complete: 10
+        Percent Complete: 24
+Executing pre create operations
+        Percent Complete: 37
+        Percent Complete: 37
+        Percent Complete: 38
+        Percent Complete: 39
+        Percent Complete: 40
+        Percent Complete: 40
+        Percent Complete: 40
+Creating Common Infrastructure Services(STB)
+        Percent Complete: 48
+        Percent Complete: 48
+        Percent Complete: 56
+        Percent Complete: 56
+        Percent Complete: 56
+Creating Audit Services Append(IAU_APPEND)
+        Percent Complete: 63
+        Percent Complete: 63
+        Percent Complete: 71
+        Percent Complete: 71
+        Percent Complete: 71
+Creating Audit Services Viewer(IAU_VIEWER)
+        Percent Complete: 78
+        Percent Complete: 78
+        Percent Complete: 78
+        Percent Complete: 79
+        Percent Complete: 79
+        Percent Complete: 79
+Creating Metadata Services(MDS)
+        Percent Complete: 87
+        Percent Complete: 87
+        Percent Complete: 87
+        Percent Complete: 88
+        Percent Complete: 88
+        Percent Complete: 88
+        Percent Complete: 89
+        Percent Complete: 89
+        Percent Complete: 89
+        Percent Complete: 90
+        Percent Complete: 91
+        Percent Complete: 91
+        Percent Complete: 91
+Creating Weblogic Services(WLS)
+        Percent Complete: 95
+        Percent Complete: 95
+        Percent Complete: 96
+        Percent Complete: 97
+        Percent Complete: 99
+        Percent Complete: 100
+Creating User Messaging Service(UCSUMS)
+Creating Audit Services(IAU)
+Creating Oracle Platform Security Services(OPSS)
+Creating SOA Infrastructure(SOAINFRA)
+Creating Oracle Enterprise Scheduler(ESS)
+Executing post create operations
+
+Repository Creation Utility: Create - Completion Summary
+
+Database details:
+-----------------------------
+Host Name                                    : oracle-db.soans.svc.cluster.local
+Port                                         : 1521
+Service Name                                 : XEPDB1
+Connected As                                 : SYS
+Prefix for (prefixable) Schema Owners        : SCHEMA
+RCU Logfile                                  : /tmp/RCU2026-01-30_15-56_456361000/logs/rcu.log
+
+Component schemas created:
+-----------------------------
+Component                                    Status         Logfile
+
+Common Infrastructure Services               Success        /tmp/RCU2026-01-30_15-56_456361000/logs/stb.log 
+Oracle Enterprise Scheduler                  Success        /tmp/RCU2026-01-30_15-56_456361000/logs/ess.log 
+Oracle Platform Security Services            Success        /tmp/RCU2026-01-30_15-56_456361000/logs/opss.log 
+SOA Infrastructure                           Success        /tmp/RCU2026-01-30_15-56_456361000/logs/soainfra.log 
+User Messaging Service                       Success        /tmp/RCU2026-01-30_15-56_456361000/logs/ucsums.log 
+Audit Services                               Success        /tmp/RCU2026-01-30_15-56_456361000/logs/iau.log 
+Audit Services Append                        Success        /tmp/RCU2026-01-30_15-56_456361000/logs/iau_append.log 
+Audit Services Viewer                        Success        /tmp/RCU2026-01-30_15-56_456361000/logs/iau_viewer.log 
+Metadata Services                            Success        /tmp/RCU2026-01-30_15-56_456361000/logs/mds.log 
+WebLogic Services                            Success        /tmp/RCU2026-01-30_15-56_456361000/logs/wls.log 
+
+Repository Creation Utility - Create : Operation Completed
+[INFO] RCU Schema created. For samples that use a 'domain.input.yaml' file, modify the file to use 'oracle-db.soans.svc.cluster.local:1521/XEPDB1' for its 'rcuDatabaseURL' and 'schema' for its 'rcuSchemaPrefix'.
+
+
+
+
+helm install traefik-operator traefik/traefik \
+  --namespace traefik --create-namespace \
+  --set "ports.web.nodePort=30305" \
+  --set "ports.websecure.nodePort=30443" \
+  --set "providers.kubernetesCRD.namespaces={traefik,soans}" \
+  --set "providers.kubernetesIngress.namespaces={traefik,soans}" \
+  --set "ingressClass.enabled=true" \
+  --set "ingressClass.isDefaultClass=false"

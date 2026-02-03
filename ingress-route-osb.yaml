@@ -1,0 +1,44 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: admin-wls
+  namespace: soans
+spec:
+  entryPoints:
+    - web   # maps to Traefik service port 80 -> your NodePort 30305 or PF 8080
+  routes:
+    - kind: Rule
+      match: PathPrefix(`/console`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver-ext
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/sbconsole`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver-ext
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/em`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver-ext
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/rconsole`)       # Hosted WRC (WLS 14.1.2+)
+      services:
+        - kind: Service
+          name: soainfra-adminserver-ext
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/management`)     # Required for Desktop WRC
+      services:
+        - kind: Service
+          name: soainfra-adminserver-ext
+          port: 7001
+          passHostHeader: true

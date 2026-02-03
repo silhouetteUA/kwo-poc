@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: soans
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oracle-xe-secret
+  namespace: soans
+type: Opaque
+stringData:
+  ORACLE_PASSWORD: "Welcome1!"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oracle-xe
+  namespace: soans
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oracle-xe
+  template:
+    metadata:
+      labels:
+        app: oracle-xe
+    spec:
+      containers:
+        - name: oracle-xe
+          image: docker.io/gvenzl/oracle-xe:21-slim
+          imagePullPolicy: Never
+          ports:
+            - name: sql
+              containerPort: 1521
+          env:
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-xe-secret
+                  key: ORACLE_PASSWORD
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: oradata
+              mountPath: /opt/oracle/oradata
+          startupProbe:
+            tcpSocket:
+              port: 1521
+            failureThreshold: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 1521
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: 1521
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 6
+      volumes:
+        - name: oradata
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oracle-db
+  namespace: soans
+spec:
+  type: ClusterIP
+  selector:
+    app: oracle-xe
+  ports:
+    - name: sql
+      port: 1521
+      targetPort: 1521
