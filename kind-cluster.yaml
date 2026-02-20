@@ -1,4 +1,3 @@
-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
@@ -6,4 +5,7 @@ nodes:
     extraMounts:
       - hostPath: /home/jay/kind-data
         containerPath: /home/jay/kind-data
+        readOnly: false
+      - hostPath: /home/jay/artifacts
+        containerPath: /home/jay/artifacts
         readOnly: false

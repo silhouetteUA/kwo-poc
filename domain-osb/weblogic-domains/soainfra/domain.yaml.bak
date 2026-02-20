@@ -19,7 +19,7 @@ spec:
   domainHomeSourceType: PersistentVolume
 
   # The WebLogic Server image that the Operator uses to start the domain
-  image: "container-registry.oracle.com/middleware/soasuite:14.1.2.0-jdk21-ol8-241205"
+  image: "container-registry.oracle.com/middleware/soasuite_cpu:12.2.1.4-jdk8-ol8-251011"
 
   # imagePullPolicy defaults to "Always" if image version is :latest
   imagePullPolicy: Never
@@ -31,7 +31,7 @@ spec:
   # Identify which Secret contains the WebLogic Admin credentials (note that there is an example of
   # how to create that Secret at the end of this file)
   webLogicCredentialsSecret:
-    name: soainfra-domain-credentials-weblogic-credentials
+    name: soainfra-domain-credentials
 
   # Whether to include the server out file into the pod's stdout, default is true
   includeServerOutInPodLog: true
@@ -62,7 +62,7 @@ spec:
     - name: JAVA_OPTIONS
       value: "-Dweblogic.StdoutDebugEnabled=false"
     - name: USER_MEM_ARGS
-      value: "-Djava.security.egd=file:/dev/./urandom -Xms256m -Xmx512m "
+      value: "-Djava.security.egd=file:/dev/./urandom -Xms256m -Xmx1024m "
     volumes:
     - name: weblogic-domain-storage-volume
       persistentVolumeClaim:
@@ -76,8 +76,8 @@ spec:
     adminService:
       channels:
     # The Admin Server's NodePort
-      #  - channelName: default
-      #    nodePort: 30701
+       - channelName: default
+         nodePort: 30701
     # Uncomment to export the T3Channel as a service
     #    - channelName: T3Channel
 
@@ -88,14 +88,14 @@ spec:
   # must describe a cluster that already exists in the WebLogic domain
   # configuration.
   clusters:
-  - name: soainfra-osb-cluster
+  - name: soainfra-osb_cluster
 
 ---
 # This is an example of how to define a Cluster resource.
 apiVersion: "weblogic.oracle/v1"
 kind: Cluster
 metadata:
-  name: soainfra-osb-cluster
+  name: soainfra-osb_cluster
   # Update this with the namespace your domain will run in:
   namespace: soans
   labels:
@@ -103,14 +103,12 @@ metadata:
     weblogic.domainUID: soainfra
 spec:
   clusterName: osb_cluster
-  serverService:
-    precreateService: true
   serverPod:
     env:
     # This parameter can be used to pass in new system properties, use the space delimiter to append multiple values.
     # Do not change the below value, only append new values to it.
     - name: K8S_REFCONF_OVERRIDES
-      value: "-Doracle.sb.tracking.resiliency.MemoryMetricEnabled=false "
+      value: "%MemoryMetricEnabled%"
   replicas: 1
   # The number of managed servers to start for unlisted clusters
   # replicas: 1

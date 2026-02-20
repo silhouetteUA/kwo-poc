@@ -1,0 +1,90 @@
+# Copyright (c) 2021, 2024, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: soainfra-deploy-artifacts-job-20260203-122654
+  namespace: soans
+spec:
+  template:
+    metadata:
+      labels:
+        weblogic.domainUID: soainfra
+        weblogic.domainName: soainfra
+        app: soainfra-deploy-artifacts-job
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: Never
+      # initContainers:
+      # - name: prepare-artifacts
+      #   image: 
+      #   imagePullPolicy: 
+      #   command: [ "/bin/sh" ]
+      #   args: ["-c","cp -rf /u01/sarchives /artifacts/soa; cp -rf /u01/sbarchives /artifacts/osb; ls -R /artifacts" ]
+      #   volumeMounts:
+      #   - mountPath: "/artifacts"
+      #     name: deploy-artifacts-job-storage-volume
+      containers:
+        - name: osb-deploy-artifacts-job
+          image: "container-registry.oracle.com/middleware/soasuite:14.1.2.0-jdk21-ol8-241205"
+          imagePullPolicy: Never
+          volumeMounts:
+          - mountPath: "/u01/weblogic"
+            name: deploy-scripts-osb-job-cm-volume
+          - mountPath: "/u01/sbarchives"
+            name: deploy-artifacts-job-storage-volume
+            subPath: osb
+          - mountPath: /weblogic-operator/secrets
+            name: soa-infra-credentials-volume
+          command: ["/bin/sh"]
+          args: ["/u01/weblogic/deploy.sh"]
+          env:
+            - name: DOMAIN_UID
+              value: "soainfra"
+            - name: PROTOCOL
+              value: "t3"
+            - name: ADMIN_SERVER_NAME_SVC
+              value: "adminserver"
+            - name: ADMIN_LISTEN_PORT
+              value: "7001"
+        # - name: soa-deploy-artifacts-job
+        #   image: "container-registry.oracle.com/middleware/soasuite:14.1.2.0-jdk21-ol8-241205"
+        #   imagePullPolicy: Never
+        #   volumeMounts:
+        #   - mountPath: "/u01/weblogic"
+        #     name: deploy-scripts-soa-job-cm-volume
+        #   - mountPath: "/u01/sarchives"
+        #     name: deploy-artifacts-job-storage-volume
+        #     subPath: soa
+        #   - mountPath: /weblogic-operator/secrets
+        #     name: soa-infra-credentials-volume
+        #   command: ["/bin/sh"]
+        #   args: ["/u01/weblogic/deploy.sh"]
+        #   env:
+        #     - name: DOMAIN_UID
+        #       value: "soainfra"
+        #     - name: PROTOCOL
+        #       value: "http"
+        #     - name: SOA_MANAGED_SERVER_PORT
+        #       value: "7003"
+        #     - name: SOA_CLUSTER_NAME
+        #       value: "soa-cluster"
+      volumes:
+        - name: deploy-artifacts-job-storage-volume
+          persistentVolumeClaim:
+            claimName: "soainfra-domain-pvc"
+      #     emptyDir: {}
+        # - name: deploy-scripts-soa-job-cm-volume
+        #   configMap:
+        #     name: soainfra-deploy-scripts-soa-job-cm
+        - name: deploy-scripts-osb-job-cm-volume
+          configMap:
+            name: soainfra-deploy-scripts-osb-job-cm
+        - name: soa-infra-credentials-volume
+          secret:
+            secretName: soainfra-domain-credentials-weblogic-credentials
+      # imagePullSecrets:
+      # - name: 
+      # - name: 
+                                                                                         
