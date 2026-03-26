@@ -1,6 +1,6 @@
 /home/jay/kwo-poc/SOA-domain-in-PV/soa_25.4.2/fmw-kubernetes/OracleSOASuite/kubernetes/create-weblogic-domain-credentials/create-weblogic-credentials.sh -u weblogic -p Welcome1! -n soans -d soainfra -s soainfra-domain-credentials
 
-/home/jay/kwo-poc/SOA-domain-in-PV/soa_25.4.2/fmw-kubernetes/OracleSOASuite/kubernetes/create-rcu-credentials/create-rcu-credentials.sh \                                                 ✔ │ 10:55:25 
+/home/jay/kwo-poc/SOA-domain-in-PV/soa_25.4.2/fmw-kubernetes/OracleSOASuite/kubernetes/create-rcu-credentials/create-rcu-credentials.sh \
   -u schema \
   -p schemapassword \
   -a SYS \
@@ -17,7 +17,7 @@ kubectl -n soans create secret generic oracle-rcu-secret \
   --from-literal='password=schemapassword'
 
 
- /home/jay/kwo-poc/SOA-domain-in-PV/soa_25.4.2/fmw-kubernetes/OracleSOASuite/kubernetes/create-rcu-schema/create-rcu-schema.sh \                                                                      ✔ │ 11:09:05 
+ /home/jay/kwo-poc/SOA-domain-in-PV/soa_25.4.2/fmw-kubernetes/OracleSOASuite/kubernetes/create-rcu-schema/create-rcu-schema.sh \
   -s schema \
   -t osb \
   -d oracle-db.soans.svc.cluster.local:1521/XEPDB1 \
@@ -176,3 +176,26 @@ helm install traefik-operator traefik/traefik \
   --set "providers.kubernetesIngress.namespaces={traefik,soans}" \
   --set "ingressClass.enabled=true" \
   --set "ingressClass.isDefaultClass=false"
+
+
+
+
+
+
+
+helmfile -f helmfile.yaml.gotmpl --state-values-file values-copilot2.yaml sync
+14 min
+helmfile -f helmfile.yaml.gotmpl --state-values-file values-copilot2.yaml destroy
+3 min
+
+
+
+
+
+
+
+
+
+
+
+

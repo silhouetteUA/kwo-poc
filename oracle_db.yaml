@@ -1,7 +1,7 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: soans
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: soans
 ---
 apiVersion: v1
 kind: Secret

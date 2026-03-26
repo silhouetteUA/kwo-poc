@@ -31,7 +31,7 @@ spec:
   # Identify which Secret contains the WebLogic Admin credentials (note that there is an example of
   # how to create that Secret at the end of this file)
   webLogicCredentialsSecret:
-    name: soainfra-domain-credentials-weblogic-credentials
+    name: soainfra-domain-credentials
 
   # Whether to include the server out file into the pod's stdout, default is true
   includeServerOutInPodLog: true

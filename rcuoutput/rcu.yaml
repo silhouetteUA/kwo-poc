@@ -15,7 +15,7 @@ spec:
   - args:
     - sleep
     - infinity
-    image: container-registry.oracle.com/middleware/soasuite:14.1.2.0-jdk21-ol8-241205
+    image: container-registry.oracle.com/middleware/soasuite_cpu:12.2.1.4-jdk8-ol8-251011
     imagePullPolicy: IfNotPresent
     name: rcu
     volumeMounts:

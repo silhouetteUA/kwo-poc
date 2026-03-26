@@ -5,7 +5,7 @@ metadata:
   namespace: soans
 spec:
   entryPoints:
-    - web   # maps to Traefik service port 80 -> your NodePort 30305 or PF 8080
+    - web
   routes:
     - kind: Rule
       match: PathPrefix(`/console`)
@@ -37,6 +37,20 @@ spec:
           passHostHeader: true
     - kind: Rule
       match: PathPrefix(`/management`)     # Required for Desktop WRC
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/poc-app-1.0.0`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/BTASNetworkService`)
       services:
         - kind: Service
           name: soainfra-adminserver
