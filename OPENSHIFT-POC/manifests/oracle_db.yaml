@@ -29,8 +29,8 @@ spec:
     spec:
       containers:
         - name: oracle-xe
-          image: docker.io/gvenzl/oracle-xe:21-slim
-          imagePullPolicy: Never
+          image: image-registry.openshift-image-registry.svc:5000/soans/oracle-xe:21-slim
+          imagePullPolicy: IfNotPresent
           ports:
             - name: sql
               containerPort: 1521
@@ -46,7 +46,7 @@ spec:
               memory: "1Gi"
             limits:
               cpu: "1"
-              memory: "3Gi"
+              memory: "4Gi"
           volumeMounts:
             - name: oradata
               mountPath: /opt/oracle/oradata

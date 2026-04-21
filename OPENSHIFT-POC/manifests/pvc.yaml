@@ -1,12 +1,12 @@
-# pvc.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: kind-pvc
+  name: weblogic-pvc
+  namsespace: soans
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
-  storageClassName: standard
+  storageClassName: ocs-storagecluster-ceph-rbd
