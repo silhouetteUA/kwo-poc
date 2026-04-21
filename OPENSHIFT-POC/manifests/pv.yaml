@@ -1,0 +1,14 @@
+# pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kind-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce # Allows the volume to be mounted as read/write by a single node
+  persistentVolumeReclaimPolicy: Retain # Retains data even after the PVC is deleted
+  storageClassName: standard
+  hostPath:
+    path: "/home/jay/kind-data" # The path on your host machine (or the kind container)

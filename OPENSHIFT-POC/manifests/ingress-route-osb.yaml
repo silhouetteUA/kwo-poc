@@ -1,0 +1,58 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: admin-wls
+  namespace: soans
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: PathPrefix(`/console`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/servicebus`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/em`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/rconsole`)       # Hosted WRC (WLS 14.1.2+)
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/management`)     # Required for Desktop WRC
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/poc-app-1.0.0`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
+    - kind: Rule
+      match: PathPrefix(`/BTASNetworkService`)
+      services:
+        - kind: Service
+          name: soainfra-adminserver
+          port: 7001
+          passHostHeader: true
