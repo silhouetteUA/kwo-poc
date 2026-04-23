@@ -205,20 +205,6 @@ releases:
             requests:
               storage: {{ .Values.pvcs.oracleXe.size | default "10Gi" }}
         ---
-        # PVC for WebLogic Domain
-        apiVersion: v1
-        kind: PersistentVolumeClaim
-        metadata:
-          name: {{ .Values.pvcs.weblogicDomain.name | default "weblogic-domain-pvc" }}
-          namespace: {{ .Values.domain.namespace | default "soans" }}
-        spec:
-          accessModes:
-            - {{ .Values.pvcs.weblogicDomain.accessMode | default "ReadWriteOnce" }}
-          storageClassName: {{ .Values.pvcs.weblogicDomain.storageClass | default "ocs-storagecluster-ceph-rbd" }}
-          resources:
-            requests:
-              storage: {{ .Values.pvcs.weblogicDomain.size | default "10Gi" }}
-        ---
         # Secrets for WebLogic and Oracle
         apiVersion: v1
         kind: Secret

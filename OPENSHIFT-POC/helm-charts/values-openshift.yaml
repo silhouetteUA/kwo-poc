@@ -257,13 +257,6 @@ pvcs:
      size: 10Gi
      accessMode: ReadWriteOnce
      storageClass: ocs-storagecluster-ceph-rbd
-   
-   weblogicDomain:
-     name: weblogic-domain-pvc
-     namespace: soans
-     size: 10Gi
-     accessMode: ReadWriteOnce
-     storageClass: ocs-storagecluster-ceph-rbd
 
 # Traefik configuration for OpenShift (not used, but kept for compatibility)
 traefik:
