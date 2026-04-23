@@ -20,11 +20,13 @@ fi
 
 echo "DB Connection String [$connectString], schemaPrefix [${schemaPrefix}] rcuType [${rcuType}] customVariables [${customVariables}], databaseType [${databaseType}]"
 
+dbpingErrFile="/tmp/dbping.err"
+
 max=1500
 counter=0
 while [ $counter -le ${max} ]
 do
- java utils.dbping ORACLE_THIN "${sysUsername} as sysdba" "${sysPassword}" ${connectString} > dbping.err 2>&1
+ java utils.dbping ORACLE_THIN "${sysUsername} as sysdba" "${sysPassword}" ${connectString} > "${dbpingErrFile}" 2>&1
  [[ $? == 0 ]] && break;
  ((counter++))
  echo "[$counter/${max}] Retrying the DB Connection ..."
@@ -32,8 +34,8 @@ do
 done
 
 if [ $counter -gt ${max} ]; then
- echo "Error output from 'java utils.dbping ORACLE_THIN \"${sysUsername} as sysdba\" SYSPASSWORD ${connectString}' from '$(pwd)/dbping.err':"
- cat dbping.err
+ echo "Error output from 'java utils.dbping ORACLE_THIN \"${sysUsername} as sysdba\" SYSPASSWORD ${connectString}' from '${dbpingErrFile}':"
+ cat "${dbpingErrFile}"
  echo "[ERROR] Oracle DB Service is not ready after [${max}] iterations ..."
  exit -1
 else

@@ -1,0 +1,463 @@
+# Copyright (c) 2024, Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+#
+environments:
+  default:
+    values:
+    - ./values.yaml
+
+---
+commonLabels:
+  fmw-kubernetes: soa-suite
+helmDefaults:
+  timeout: {{ .Values.timeout | default 2400 }}
+  wait: false
+
+
+# Chart repositories
+repositories:
+- name: weblogic-operator
+  url: https://oracle.github.io/weblogic-kubernetes-operator/charts
+{{- if and (ne .Values.loadbalancer.type "OPENSHIFT") (eq .Values.loadbalancer.type "TRAEFIK") }}
+- name: traefik
+  url: https://helm.traefik.io/traefik
+{{- end }}
+{{- if and (ne .Values.loadbalancer.type "OPENSHIFT") (eq .Values.loadbalancer.type "NGINX") }}
+- name: ingress-nginx
+  url: https://kubernetes.github.io/ingress-nginx
+{{- end }}
+{{- if eq ( .Values.certmanager.provision ) true }}
+- name: jetstack
+  url: https://charts.jetstack.io
+{{- end }} 
+
+# Releases to be installed
+releases:
+- name: {{ .Values.certmanager.release_name }}
+  chart: jetstack/cert-manager
+  version: {{ .Values.certmanager.version }}
+  installed: {{ .Values.certmanager.provision | default false }}
+  namespace: {{ .Values.certmanager.namespace | default "cert-manager" }}
+  hooks:
+  - events: ["presync"]
+    showlogs: true
+    command: "/bin/sh"
+    args: [ "-c", "${KUBERNETES_CLI:-kubectl} apply -f https://github.com/cert-manager/cert-manager/releases/download/{{ .Values.certmanager.version }}/cert-manager.crds.yaml" ]
+
+# Oracle Database Operator
+- name: {{ .Values.dboperator.release_name }}
+  chart: ./charts/oracledb-operator
+  installed: {{ .Values.dboperator.provision | default false }}
+  namespace: {{ .Values.dboperator.namespace | default "oracle-database-operator-system" }}
+{{- if eq ( .Values.certmanager.provision ) true }}
+  needs:
+  - {{ .Values.certmanager.namespace | default "cert-manager" }}/{{ .Values.certmanager.release_name }}
+{{- end }}
+  hooks:
+  - events: ["postsync"]
+    showlogs: true
+    command: "sleep"
+    args: [15]
+
+# weblogic kubernetes operator
+- name: {{ .Values.wlsoperator.release_name }}
+  chart: weblogic-operator/weblogic-operator
+  version: {{ .Values.wlsoperator.version }}
+  wait: true
+  installed: {{ .Values.wlsoperator.provision | default false}}
+  namespace: {{ .Values.wlsoperator.namespace | default "opns" }}
+  values:
+  - ./values/wlsoperator/values.yaml.gotmpl
+  hooks:
+  - events: ["prepare"]
+    showlogs: true
+    command: "/bin/bash"
+    args:
+      - "-c"
+      - '${KUBERNETES_CLI:-kubectl} create namespace {{ .Values.wlsoperator.namespace | default "opns" }} --dry-run=client -o yaml | ${KUBERNETES_CLI:-kubectl} apply -f - && ${KUBERNETES_CLI:-kubectl} create namespace {{ .Values.domain.namespace | default "soans" }} --dry-run=client -o yaml | ${KUBERNETES_CLI:-kubectl} apply -f - && {{- if ne .Values.loadbalancer.type "OPENSHIFT" }} ${KUBERNETES_CLI:-kubectl} create namespace {{ .Values.loadbalancer.namespace | default "traefik" }} --dry-run=client -o yaml | ${KUBERNETES_CLI:-kubectl} apply -f - &&{{- end }} ${KUBERNETES_CLI:-kubectl} label namespace {{ .Values.domain.namespace | default "soans" }} weblogic-operator=enabled --overwrite && ${KUBERNETES_CLI:-kubectl} create serviceaccount {{ .Values.wlsoperator.serviceAccount | default "default" }} -n {{ .Values.wlsoperator.namespace | default "opns" }} --dry-run=client -o yaml | ${KUBERNETES_CLI:-kubectl} apply -f -'
+  # OpenShift: grant anyuid SCC so the operator can run as UID 1000
+{{- if eq .Values.loadbalancer.type "OPENSHIFT" }}
+  - events: ["prepare"]
+    showlogs: true
+    command: "/bin/bash"
+    args:
+      - "-c"
+      - |
+        cat <<'SCCEOF' | ${KUBERNETES_CLI:-kubectl} apply -f -
+        apiVersion: security.openshift.io/v1
+        kind: SecurityContextConstraints
+        metadata:
+          name: weblogic-operator-scc
+        allowHostDirVolumePlugin: false
+        allowHostIPC: false
+        allowHostNetwork: false
+        allowHostPID: false
+        allowHostPorts: false
+        allowPrivilegeEscalation: false
+        allowPrivilegedContainer: false
+        allowedCapabilities: null
+        defaultAddCapabilities: null
+        fsGroup:
+          type: RunAsAny
+        groups: []
+        priority: 10
+        readOnlyRootFilesystem: false
+        requiredDropCapabilities:
+          - ALL
+        runAsUser:
+          type: RunAsAny
+        seLinuxContext:
+          type: MustRunAs
+        seccompProfiles:
+          - runtime/default
+        supplementalGroups:
+          type: RunAsAny
+        users: []
+        volumes:
+          - configMap
+          - downwardAPI
+          - emptyDir
+          - persistentVolumeClaim
+          - projected
+          - secret
+        SCCEOF
+        oc adm policy add-scc-to-user weblogic-operator-scc -z {{ .Values.wlsoperator.serviceAccount | default "op-sa" }} -n {{ .Values.wlsoperator.namespace | default "opns" }}
+{{- end }}
+  - events: ["postsync"]
+    showlogs: true
+    command: "sleep"
+    args: [15]
+  - events: ["postsync"]
+    showlogs: true
+    command: "/bin/bash"
+    args:
+      - "-c"
+      - '${KUBERNETES_CLI:-kubectl} -n {{ .Values.wlsoperator.namespace | default "opns" }} rollout status deploy/weblogic-operator --timeout=300s && ${KUBERNETES_CLI:-kubectl} -n {{ .Values.wlsoperator.namespace | default "opns" }} rollout status deploy/weblogic-operator-webhook --timeout=300s'
+  - events: ["postsync"]
+    showlogs: true
+    command:  "/bin/bash"
+    args: ["-c","${KUBERNETES_CLI:-kubectl} get all -n {{ .Values.wlsoperator.namespace }}"]
+  - events: ["postuninstall"]
+    showlogs: true
+    command: "/bin/bash"
+    args:
+      - "-c"
+      - '${KUBERNETES_CLI:-kubectl} delete namespace {{ .Values.wlsoperator.namespace | default "opns" }} --ignore-not-found=true && ${KUBERNETES_CLI:-kubectl} delete namespace {{ .Values.domain.namespace | default "soans" }} --ignore-not-found=true {{- if ne .Values.loadbalancer.type "OPENSHIFT" }}&& ${KUBERNETES_CLI:-kubectl} delete namespace {{ .Values.loadbalancer.namespace | default "traefik" }} --ignore-not-found=true{{- end }}'
+
+# Oracle SOA Suite Domain with OpenShift/KIND specific deployments
+- name: {{ .Values.domain.release_name | default "soadomain" }}
+  chart: ./charts/soa-suite
+  installed: {{ .Values.domain.provision | default false}}
+  namespace: {{ .Values.domain.namespace | default "soans"}}
+  needs:
+{{- if eq ( .Values.wlsoperator.provision) true }}
+  - {{ .Values.wlsoperator.namespace | default "opns" }}/{{ .Values.wlsoperator.release_name | default "weblogic-operator" }}
+{{- end }}
+{{- if eq ( .Values.oracledb.provision) true }}
+  - {{ .Values.dboperator.namespace | default "oracle-database-operator-system" }}/{{ .Values.dboperator.release_name }}
+{{- end }}
+  values:
+  - ./values/soa-suite/values.yaml.gotmpl
+  - domain:
+      serverStartPolicy: "Never"
+  hooks:
+  # Create PVCs and Oracle-XE deployment for OpenShift
+{{- if eq .Values.loadbalancer.type "OPENSHIFT" }}
+  - events: ["prepare"]
+    showlogs: true
+    command: "/bin/bash"
+    args:
+      - "-c"
+      - |
+        # Ensure namespace exists (prepare hooks may run in parallel with wlsoperator's hook)
+        ${KUBERNETES_CLI:-kubectl} create namespace {{ .Values.domain.namespace | default "soans" }} --dry-run=client -o yaml | ${KUBERNETES_CLI:-kubectl} apply -f -
+        ${KUBERNETES_CLI:-kubectl} label namespace {{ .Values.domain.namespace | default "soans" }} weblogic-operator=enabled --overwrite
+        # Precreate Domain service account used by WebLogic server/introspector pods and bind SCC
+        # Include Helm ownership metadata so Helm can adopt this resource during install/upgrade.
+        cat <<'SAEOF' | ${KUBERNETES_CLI:-kubectl} apply -f -
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: {{ .Values.domain.serviceAccount.name | default (printf "%s-soa-suite" (.Values.domain.release_name | default "soadomain")) }}
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+          labels:
+            app.kubernetes.io/managed-by: Helm
+          annotations:
+            meta.helm.sh/release-name: {{ .Values.domain.release_name | default "soadomain" }}
+            meta.helm.sh/release-namespace: {{ .Values.domain.namespace | default "soans" }}
+        SAEOF
+        oc adm policy add-scc-to-user weblogic-operator-scc -z {{ .Values.domain.serviceAccount.name | default (printf "%s-soa-suite" (.Values.domain.release_name | default "soadomain")) }} -n {{ .Values.domain.namespace | default "soans" }}
+        # Create oracle-xe service account and grant anyuid SCC (needed for initContainer runAsUser=0)
+        ${KUBERNETES_CLI:-kubectl} create serviceaccount oracle-xe-sa -n {{ .Values.domain.namespace | default "soans" }} --dry-run=client -o yaml | ${KUBERNETES_CLI:-kubectl} apply -f -
+        oc adm policy add-scc-to-user anyuid -z oracle-xe-sa -n {{ .Values.domain.namespace | default "soans" }}
+        cat <<'EOF' | ${KUBERNETES_CLI:-kubectl} apply -f -
+        # PVC for Oracle-XE database
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: {{ .Values.pvcs.oracleXe.name | default "oracle-xe-pvc" }}
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+        spec:
+          accessModes:
+            - {{ .Values.pvcs.oracleXe.accessMode | default "ReadWriteOnce" }}
+          storageClassName: {{ .Values.pvcs.oracleXe.storageClass | default "ocs-storagecluster-ceph-rbd" }}
+          resources:
+            requests:
+              storage: {{ .Values.pvcs.oracleXe.size | default "10Gi" }}
+        ---
+        # PVC for WebLogic Domain
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: {{ .Values.pvcs.weblogicDomain.name | default "weblogic-domain-pvc" }}
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+        spec:
+          accessModes:
+            - {{ .Values.pvcs.weblogicDomain.accessMode | default "ReadWriteOnce" }}
+          storageClassName: {{ .Values.pvcs.weblogicDomain.storageClass | default "ocs-storagecluster-ceph-rbd" }}
+          resources:
+            requests:
+              storage: {{ .Values.pvcs.weblogicDomain.size | default "10Gi" }}
+        ---
+        # Secrets for WebLogic and Oracle
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: soainfra-domain-credentials
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+        type: Opaque
+        stringData:
+          username: "{{ .Values.domain.credentials.username | default "weblogic" }}"
+          password: "{{ .Values.domain.credentials.password | default "Welcome1!" }}"
+        ---
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: oracle-xe-secret
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+        type: Opaque
+        stringData:
+          username: "{{ .Values.oracledb.credentials.username | default "SYS" }}"
+          password: "{{ .Values.oracledb.credentials.password | default "Welcome1!" }}"
+          ORACLE_PASSWORD: "{{ .Values.oracledb.credentials.password | default "Welcome1!" }}"
+        ---
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: oracle-rcu-secret
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+        type: Opaque
+        stringData:
+          username: "{{ .Values.domain.rcuSchema.credentials.username }}"
+          password: "{{ .Values.domain.rcuSchema.credentials.password }}"
+          sys_username: "{{ .Values.oracledb.credentials.username | default "SYS" }}"
+          sys_password: "{{ .Values.oracledb.credentials.password | default "Welcome1!" }}"
+        ---
+        # Oracle-XE Deployment with PVC
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: oracle-xe
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: oracle-xe
+          template:
+            metadata:
+              labels:
+                app: oracle-xe
+            spec:
+              serviceAccountName: oracle-xe-sa
+              initContainers:
+                - name: fix-oradata-permissions
+                  image: {{ .Values.oracledb.image }}
+                  imagePullPolicy: {{ .Values.oracledb.imagePullPolicy | default "IfNotPresent" }}
+                  securityContext:
+                    runAsUser: 0
+                    runAsGroup: 0
+                  command:
+                    - /bin/bash
+                    - -c
+                    - |
+                      chown -R 54321:54321 /opt/oracle/oradata || true
+                      chmod -R ug+rwX /opt/oracle/oradata || true
+                  volumeMounts:
+                    - name: oradata
+                      mountPath: /opt/oracle/oradata
+              containers:
+                - name: oracle-xe
+                  image: {{ .Values.oracledb.image }}
+                  imagePullPolicy: {{ .Values.oracledb.imagePullPolicy | default "IfNotPresent" }}
+                  ports:
+                    - name: sql
+                      containerPort: 1521
+                  env:
+                    - name: ORACLE_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: oracle-xe-secret
+                          key: ORACLE_PASSWORD
+                  resources:
+                    requests:
+                      cpu: "300m"
+                      memory: "1Gi"
+                    limits:
+                      cpu: "1"
+                      memory: "3Gi"
+                  volumeMounts:
+                    - name: oradata
+                      mountPath: /opt/oracle/oradata
+                  startupProbe:
+                    tcpSocket:
+                      port: 1521
+                    failureThreshold: 60
+                    periodSeconds: 10
+                  readinessProbe:
+                    tcpSocket:
+                      port: 1521
+                    initialDelaySeconds: 20
+                    periodSeconds: 10
+                    failureThreshold: 12
+                  livenessProbe:
+                    tcpSocket:
+                      port: 1521
+                    initialDelaySeconds: 60
+                    periodSeconds: 20
+                    failureThreshold: 6
+              volumes:
+                - name: oradata
+                  persistentVolumeClaim:
+                    claimName: {{ .Values.pvcs.oracleXe.name | default "oracle-xe-pvc" }}
+        ---
+        # Oracle-XE Service
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: oracle-db
+          namespace: {{ .Values.domain.namespace | default "soans" }}
+        spec:
+          type: ClusterIP
+          selector:
+            app: oracle-xe
+          ports:
+            - name: sql
+              port: 1521
+              targetPort: 1521
+        EOF
+{{- end }}
+  - events: ["prepare"]
+    showlogs: true
+    command: "./scripts/createDomainDBNamespace.sh"
+{{- if eq .Values.oracledb.provision true }}
+    args: [{{ .Values.domain.namespace | default "soans"}}, {{ .Values.oracledb.namespaceOverride | default "soans"}}]  
+{{- else }}
+    args: [{{ .Values.domain.namespace | default "soans"}}, "None"]  
+{{- end }}
+  - events: ["postsync"]
+    showlogs: true
+    command: "./scripts/ApplyServerStartPolicy.sh"
+    args: ["-d", {{ .Values.domain.domainName | default "soainfra"}}, "-n", {{ .Values.domain.namespace | default "soans"}}, "-s", {{ .Values.domain.serverStartPolicy | default "IfNeeded"}}]
+  - events: ["postsync"]
+    showlogs: true
+    command: "./scripts/waitForDomain.sh"
+    args: ["-d", {{ .Values.domain.domainName | default "soainfra"}}, "-n", {{ .Values.domain.namespace | default "soans"}}, "-p", "Completed"]
+  - events: ["postsync"]
+    showlogs: true
+    command: "/bin/bash"
+    args: ["-c", "${KUBERNETES_CLI:-kubectl} get all -n {{ .Values.domain.namespace }}"]
+  - events: ["postsync"]
+    showlogs: true
+    command: "./scripts/collectDomainLogs.sh"
+    args: ["-n", {{ .Values.domain.namespace | default "soans"}}]
+  # Wait for Oracle-XE to be ready before deploying routes (OpenShift only)
+{{- if eq .Values.loadbalancer.type "OPENSHIFT" }}
+  - events: ["postsync"]
+    showlogs: true
+    command: "/bin/bash"
+    args:
+      - "-c"
+      - '${KUBERNETES_CLI:-kubectl} wait --for=condition=ready pod -l app=oracle-xe -n {{ .Values.domain.namespace | default "soans" }} --timeout=600s 2>/dev/null || true'
+{{- end }}
+  # Deploy OpenShift routes
+{{- if eq .Values.loadbalancer.type "OPENSHIFT" }}
+  - events: ["postsync"]
+    showlogs: true
+    command: "/bin/bash"
+    args:
+      - "-c"
+      - |
+        cat <<'ROUTES_EOF' | ${KUBERNETES_CLI:-kubectl} apply -f -
+        {{- range .Values.openshift.routes }}
+        apiVersion: route.openshift.io/v1
+        kind: Route
+        metadata:
+          name: {{ .name }}
+          namespace: {{ .namespace }}
+        spec:
+          host: {{ .host }}
+          path: {{ .path }}
+          to:
+            kind: Service
+            name: {{ .service }}
+          port:
+            targetPort: {{ .port }}
+          tls:
+            insecureEdgeTerminationPolicy: {{ .tls.insecureEdgeTerminationPolicy | default "Allow" }}
+            termination: edge
+        ---
+        {{- end }}
+        ROUTES_EOF
+{{- end }}
+{{- if eq .Values.loadbalancer.provision true }}
+  - events: ["postsync"]
+    showlogs: true
+    command: "./scripts/getAppURLs.sh"
+    args: ["-d", {{ .Values.domain.type }}, "-n", {{ .Values.loadbalancer.namespace }}, "-t", {{ .Values.loadbalancer.type }}, "-r", {{ .Values.loadbalancer.release_name }}, "-l", {{ .Values.loadbalancer.hostname | default "null"}}, "-y", {{ .Values.loadbalancer.sslType }}, "-a", {{ .Values.loadbalancer.e2ehostName.admin | default "null" }} , "-s",{{ .Values.loadbalancer.e2ehostName.soa | default "null"}} , "-o",{{ .Values.loadbalancer.e2ehostName.osb | default "null"}}]
+{{- end }}
+  - events: ["preuninstall"]
+    showlogs: true
+    command: "./scripts/stopDomain.sh"
+    args: ["-d",{{ .Values.domain.domainName | default "soainfra"}}, "-n", {{ .Values.domain.namespace | default "soans"}}]
+  - events: ["preuninstall"]
+    showlogs: true
+    command: "./scripts/waitForDomain.sh"
+    args: ["-d",{{ .Values.domain.domainName | default "soainfra"}}, "-n", {{ .Values.domain.namespace | default "soans"}}, "-p", "0", "-i"]
+  - events: ["postuninstall"]
+    showlogs: true
+    command: "./scripts/cleanK8sJobs.sh"
+    args: ["-d",{{ .Values.domain.domainName | default "soainfra"}}, "-n", {{ .Values.domain.namespace | default "soans"}}]
+
+# TRAEFIK/NGINX Controller install (skipped for OpenShift)
+{{- if ne .Values.loadbalancer.type "OPENSHIFT" }}
+- name: {{ .Values.loadbalancer.release_name | default "soalb" }}
+{{- if eq ( .Values.loadbalancer.type) "TRAEFIK" }}
+  chart: traefik/traefik
+  version: {{ .Values.loadbalancer.version | default "24.0.0" }}
+{{- else }}
+  chart: ingress-nginx/ingress-nginx
+{{- end }}
+  installed: {{ .Values.loadbalancer.provision }}
+  namespace: {{ .Values.loadbalancer.namespace | default "soalbns"}}
+  values:
+    - ./values/{{ lower .Values.loadbalancer.type }}/values.yaml.gotmpl
+  {{- if eq ( .Values.loadbalancer.type) "TRAEFIK" }}
+  {{- else }}
+{{- if and (eq .Values.loadbalancer.sslType "E2ESSL") (eq .Values.loadbalancer.type "NGINX") }}
+    - controller:
+        extraArgs:
+           enable-ssl-passthrough: true   
+{{- end }}
+{{- end }}   
+
+# TRAEFIK/NGINX Ingress install (skipped for OpenShift)
+- name: {{ lower .Values.loadbalancer.release_name }}-ingress-per-domain
+  chart: ./charts/ingress-per-domain 
+  namespace: {{ .Values.domain.namespace | default "soans"}} 
+  needs:
+  - {{ .Values.loadbalancer.namespace | default "soalbns" }}/{{ .Values.loadbalancer.release_name | default "soalb" }}
+  values:
+    - ./values.yaml
+    - ./values/ingress-per-domain/values.yaml.gotmpl
+{{- end }}

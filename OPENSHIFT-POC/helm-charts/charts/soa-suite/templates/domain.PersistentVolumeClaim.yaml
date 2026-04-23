@@ -8,9 +8,15 @@ metadata:
   labels:
     weblogic.domainUID: {{ .Values.domain.domainName }}
 spec:
+  {{- if eq .Values.domain.storage.type "pvc" }}
+  storageClassName: {{ .Values.domain.storage.storageClass | default "ocs-storagecluster-ceph-rbd" }}
+  accessModes:
+    - {{ .Values.domain.storage.accessMode | default "ReadWriteOnce" }}
+  {{- else }}
   storageClassName: {{ .Values.domain.domainName }}-domain-storage-class
   accessModes:
     - ReadWriteMany
+  {{- end }}
   resources:
     requests:
       storage: {{ .Values.domain.storage.capacity }}

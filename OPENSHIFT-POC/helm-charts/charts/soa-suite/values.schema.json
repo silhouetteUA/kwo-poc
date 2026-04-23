@@ -106,7 +106,7 @@
           "properties": {
             "repository": {
               "type": "string",
-              "pattern": "^[a-z0-9-_./]+$"
+              "pattern": "^[a-z0-9-_.:/ ]+$"
             },
             "pullPolicy": {
               "type": "string",
@@ -289,8 +289,7 @@
           "required": [
             "capacity",
             "reclaimPolicy",
-            "type",
-            "path"
+            "type"
           ],
           "properties": {
             "capacity": {
@@ -303,7 +302,10 @@
             },
             "type": {
               "type": "string",
-              "enum": ["nfs", "hostpath"]
+              "enum": ["nfs", "hostpath", "pvc"]
+            },
+            "storageClass": {
+              "type": "string"
             },
             "path": {
               "type": "string"

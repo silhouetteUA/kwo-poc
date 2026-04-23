@@ -64,6 +64,7 @@ spec:
   serverStartPolicy: {{ .Values.domain.serverStartPolicy }}
 
   serverPod:
+    serviceAccountName: {{ include "soa-suite.serviceAccountName" . }}
     # an (optional) list of environment variable to be set on the servers
     env:
       - name: JAVA_OPTIONS

@@ -1,0 +1,300 @@
+# OpenShift-specific values for WebLogic SOA/OSB Domain
+# Migrated from KIND cluster to OpenShift
+# Timeout value required to install all the helm releases
+timeout: 3600
+
+# Values for SOA/OSB Domain
+domain:
+   provision: true
+   namespace: soans
+   release_name: soadomain
+   type: osb
+   domainName: soainfra
+   productionMode: true
+   secureEnabled: false
+
+   credentials:
+     secretName: soainfra-domain-credentials
+     username: weblogic
+     password: "Welcome1!"
+
+   sslEnabled: false
+   javaOptions: "-Dweblogic.StdoutDebugEnabled=false"
+   persistenceStore: jdbc
+
+   image:
+     repository: image-registry.openshift-image-registry.svc:5000/soans/soasuite_cpu
+     pullPolicy: IfNotPresent
+     tag: 12.2.1.4-jdk8-ol8-251011
+   imagePullSecrets:
+
+   rcuSchema:
+     prefix: SCHEMA
+     profileType: SMALL
+     databaseType: ORACLE
+     edition: ''
+     credentials:
+       secretName: oracle-rcu-secret
+       username: "schema"
+       password: "schemapassword"
+
+   # OpenShift: Using PVC with OCS StorageClass instead of hostpath
+   storage:
+     capacity: 10Gi
+     reclaimPolicy: Delete
+     type: pvc
+     storageClass: ocs-storagecluster-ceph-rbd
+     accessMode: ReadWriteOnce
+
+   maxManagedServerCount: 5
+
+   admin:
+    name: AdminServer
+    listenPort: 7001
+    sslListenPort: 7002
+    exposeNodePort: false
+    nodePort: 30701
+    administrationPort: 9002
+
+   soaCluster:
+    name: soa_cluster
+    managedServers:
+      count: 0
+      name: soa_server
+      listenPort: 7003
+      sslListenPort: 7004
+      administrationPort: 9004
+
+   osbCluster:
+    name: osb_cluster
+    managedServers:
+      count: 1
+      name: osb_server
+      listenPort: 8002
+      sslListenPort: 8003
+      administrationPort: 9007
+
+   rootDir: /u01/oracle/user_projects
+   scriptDir: /u01/weblogic
+   logHomeEnabled: true
+   logHome: /u01/oracle/user_projects/domains/logs/soainfra
+   includeServerOutInPodLog: true
+   httpAccessLogInLogHome: true
+   serverStartPolicy: IfNeeded
+   serviceAccount:
+     create: true
+     annotations: {}
+     name: ""
+
+   # OpenShift: keep domain-create job ownership aligned with introspector pods (uid=1000)
+   podSecurityContext:
+     runAsUser: 1000
+     runAsGroup: 0
+     fsGroup: 0
+     seccompProfile:
+       type: RuntimeDefault
+
+# Values required for Database - OpenShift Oracle-XE
+oracledb:
+   # Keep this false because oracle-xe will be deployed via extraObjects with PVC
+   provision: false
+   namespaceOverride: soans
+   # Using internal OpenShift image registry stream
+   # Built from: docker.io/gvenzl/oracle-xe:21-slim
+   image: image-registry.openshift-image-registry.svc:5000/soans/oracle-xe:21-slim
+   imagePullSecrets:
+   imagePullPolicy: IfNotPresent
+   oracle_sid: XE
+   oracle_pdb: XEPDB1
+   oracle_characterset: AL32UTF8
+   oracle_edition: enterprise
+   url: oracle-db.soans.svc.cluster.local:1521/XEPDB1
+   credentials:
+     secretName: oracle-xe-secret
+     username: SYS
+     password: "Welcome1!"
+   persistence:
+     # OpenShift: Using OCS StorageClass
+     storageClass: ocs-storagecluster-ceph-rbd
+     size: 10Gi
+     accessMode: "ReadWriteOnce"
+     pvcName: oracle-xe-pvc
+
+# Values for Oracle Database Operator
+dboperator:
+   provision: false
+   namespace: oracle-database-operator-system
+   release_name: oracledb-operator
+   version: latest
+
+# Values for cert-manager required for Oracle Database Operator
+certmanager:
+   provision: false
+   namespace: cert-manager
+   release_name: cert-manager
+   version: v1.13.0
+
+# Values for WebLogic Kubernetes Operator
+wlsoperator:
+   provision: true
+   namespace: opns
+   release_name: weblogic-operator
+   serviceAccount: op-sa
+   domainNamespaceSelectionStrategy: LabelSelector
+   domainNamespaceLabelSelector: "weblogic-operator=enabled"
+   image: "ghcr.io/oracle/weblogic-kubernetes-operator:4.2.19"
+   imagePullPolicy: IfNotPresent
+   version: 4.2.19
+   javaLoggingLevel: "FINE"
+
+# Values for Loadbalancer - OpenShift uses native Routes
+# Traefik is NOT provisioned in OpenShift as ingress is already provided
+loadbalancer:
+   # Disabled in OpenShift - use native routes instead
+   provision: false
+   type: OPENSHIFT
+   namespace: traefik
+   release_name: traefik-operator
+   version: 24.0.0
+   sslType: E2ESSL
+   hostname: soasuite.domain.org
+   certCommonName: "*.domain.org"
+   e2ehostName:
+     admin: admin.domain.org
+     soa: soa.domain.org
+     osb: osb.domain.org
+
+# Customize the NGINX controller helm charts default values
+nginx:
+   controller:
+     service:
+       type: NodePort
+     admissionWebhooks:
+       enabled: false
+     allowSnippetAnnotations: true
+     image:
+       allowPrivilegeEscalation: true
+
+# OpenShift Routes configuration
+# These replace Traefik IngressRoute resources
+openshift:
+   # OpenShift native routes will be deployed instead of Traefik
+   routes:
+     # Admin Server Console routes
+     - name: admin-console
+       namespace: soans
+       host: admin.domain.org
+       service: soainfra-adminserver
+       port: 7001
+       path: /console
+       tls:
+         insecureEdgeTerminationPolicy: Allow
+     
+     - name: admin-em
+       namespace: soans
+       host: admin.domain.org
+       service: soainfra-adminserver
+       port: 7001
+       path: /em
+       tls:
+         insecureEdgeTerminationPolicy: Allow
+     
+     - name: admin-management
+       namespace: soans
+       host: admin.domain.org
+       service: soainfra-adminserver
+       port: 7001
+       path: /management
+       tls:
+         insecureEdgeTerminationPolicy: Allow
+     
+     # OSB/SOA routes
+     - name: osb-servicebus
+       namespace: soans
+       host: osb.domain.org
+       service: soainfra-adminserver
+       port: 7001
+       path: /servicebus
+       tls:
+         insecureEdgeTerminationPolicy: Allow
+     
+     - name: osb-rconsole
+       namespace: soans
+       host: osb.domain.org
+       service: soainfra-adminserver
+       port: 7001
+       path: /rconsole
+       tls:
+         insecureEdgeTerminationPolicy: Allow
+     
+     - name: osb-poc-app
+       namespace: soans
+       host: osb.domain.org
+       service: soainfra-adminserver
+       port: 7001
+       path: /poc-app-1.0.0
+       tls:
+         insecureEdgeTerminationPolicy: Allow
+     
+     - name: osb-networking
+       namespace: soans
+       host: osb.domain.org
+       service: soainfra-adminserver
+       port: 7001
+       path: /BTASNetworkService
+       tls:
+         insecureEdgeTerminationPolicy: Allow
+
+# Storage Classes and PVCs for OpenShift
+storageclasses:
+   ocsRbd: ocs-storagecluster-ceph-rbd
+   ocsFile: ocs-storagecluster-cephfs
+
+pvcs:
+   oracleXe:
+     name: oracle-xe-pvc
+     namespace: soans
+     size: 10Gi
+     accessMode: ReadWriteOnce
+     storageClass: ocs-storagecluster-ceph-rbd
+   
+   weblogicDomain:
+     name: weblogic-domain-pvc
+     namespace: soans
+     size: 10Gi
+     accessMode: ReadWriteOnce
+     storageClass: ocs-storagecluster-ceph-rbd
+
+# Traefik configuration for OpenShift (not used, but kept for compatibility)
+traefik:
+   # DISABLED for OpenShift - using native routes instead
+   ports:
+     web:
+       nodePort: 30305
+     websecure:
+       nodePort: 30443
+   providers:
+     kubernetesCRD:
+       namespaces:
+         - traefik
+         - soans
+     kubernetesIngress:
+       namespaces:
+         - traefik
+         - soans
+   ingressClass:
+     enabled: false
+     isDefaultClass: false
+   image:
+     registry: docker.io
+     repository: traefik
+     tag: "v2.10.4"
+     pullPolicy: IfNotPresent
+   deployment:
+     podAnnotations: {}
+   service:
+     type: NodePort
+
+   # NOTE: extraObjects DISABLED for OpenShift
+   # Oracle-XE will be deployed with PVC via helmfile hooks instead
+   extraObjects: []
