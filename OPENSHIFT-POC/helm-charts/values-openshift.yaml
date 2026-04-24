@@ -40,10 +40,11 @@ domain:
 
    # OpenShift: Using PVC with OCS StorageClass instead of hostpath
    storage:
-     capacity: 10Gi
+     capacity: 100Gi
      reclaimPolicy: Delete
      type: pvc
      storageClass: ocs-storagecluster-ceph-rbd
+     volumeMode: Block
      accessMode: ReadWriteOnce
 
    maxManagedServerCount: 5

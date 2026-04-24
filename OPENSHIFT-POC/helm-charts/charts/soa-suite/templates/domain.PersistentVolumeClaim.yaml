@@ -10,10 +10,12 @@ metadata:
 spec:
   {{- if eq .Values.domain.storage.type "pvc" }}
   storageClassName: {{ .Values.domain.storage.storageClass | default "ocs-storagecluster-ceph-rbd" }}
+  volumeMode: {{ .Values.domain.storage.volumeMode | default "Filesystem" }}
   accessModes:
     - {{ .Values.domain.storage.accessMode | default "ReadWriteOnce" }}
   {{- else }}
   storageClassName: {{ .Values.domain.domainName }}-domain-storage-class
+  volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   {{- end }}

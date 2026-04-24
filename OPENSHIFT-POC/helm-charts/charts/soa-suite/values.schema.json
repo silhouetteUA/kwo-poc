@@ -307,6 +307,10 @@
             "storageClass": {
               "type": "string"
             },
+            "volumeMode": {
+              "type": "string",
+              "enum": ["Filesystem", "Block"]
+            },
             "path": {
               "type": "string"
             },
