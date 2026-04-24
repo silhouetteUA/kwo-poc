@@ -1,3 +1,12 @@
 SOA-domain-in-PV/
 domain-osb/
 rcuoutput/
+
+# OpenShift helm-charts generated notes
+/OPENSHIFT-POC/helm-charts/IMPLEMENTATION-SUMMARY.md
+/OPENSHIFT-POC/helm-charts/INGRESSROUTE-TO-ROUTE-MAPPING.md
+/OPENSHIFT-POC/helm-charts/INITCONTAINER-ADDITION.md
+/OPENSHIFT-POC/helm-charts/MIGRATION-SUMMARY.md
+/OPENSHIFT-POC/helm-charts/OPENSHIFT-DEPLOYMENT.md
+/OPENSHIFT-POC/helm-charts/PVC-PERMISSIONS-GUIDE.md
+/OPENSHIFT-POC/helm-charts/QUICK-REFERENCE.md
