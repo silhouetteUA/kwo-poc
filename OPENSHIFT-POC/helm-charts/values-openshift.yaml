@@ -188,11 +188,12 @@ nginx:
 # These replace Traefik IngressRoute resources
 openshift:
    # OpenShift native routes will be deployed instead of Traefik
+   # Cluster domain: hcp-resp-esb-poc-01.rpc.ren.rogers.com
    routes:
      # Admin Server Console routes
      - name: admin-console
        namespace: soans
-       host: admin.domain.org
+       host: admin-console.apps.hcp-resp-esb-poc-01.rpc.ren.rogers.com
        service: soainfra-adminserver
        port: 7001
        path: /console
@@ -201,7 +202,7 @@ openshift:
      
      - name: admin-em
        namespace: soans
-       host: admin.domain.org
+       host: admin-console.apps.hcp-resp-esb-poc-01.rpc.ren.rogers.com
        service: soainfra-adminserver
        port: 7001
        path: /em
@@ -210,7 +211,7 @@ openshift:
      
      - name: admin-management
        namespace: soans
-       host: admin.domain.org
+       host: admin-console.apps.hcp-resp-esb-poc-01.rpc.ren.rogers.com
        service: soainfra-adminserver
        port: 7001
        path: /management
@@ -220,7 +221,7 @@ openshift:
      # OSB/SOA routes
      - name: osb-servicebus
        namespace: soans
-       host: osb.domain.org
+       host: osb.apps.hcp-resp-esb-poc-01.rpc.ren.rogers.com
        service: soainfra-adminserver
        port: 7001
        path: /servicebus
@@ -229,7 +230,7 @@ openshift:
      
      - name: osb-rconsole
        namespace: soans
-       host: osb.domain.org
+       host: osb.apps.hcp-resp-esb-poc-01.rpc.ren.rogers.com
        service: soainfra-adminserver
        port: 7001
        path: /rconsole
@@ -238,7 +239,7 @@ openshift:
      
      - name: osb-poc-app
        namespace: soans
-       host: osb.domain.org
+       host: osb.apps.hcp-resp-esb-poc-01.rpc.ren.rogers.com
        service: soainfra-adminserver
        port: 7001
        path: /poc-app-1.0.0
@@ -247,7 +248,7 @@ openshift:
      
      - name: osb-networking
        namespace: soans
-       host: osb.domain.org
+       host: osb.apps.hcp-resp-esb-poc-01.rpc.ren.rogers.com
        service: soainfra-adminserver
        port: 7001
        path: /BTASNetworkService
