@@ -65,6 +65,10 @@ spec:
 
   serverPod:
     serviceAccountName: {{ include "soa-suite.serviceAccountName" . }}
+    {{- with .Values.domain.nodeSelector }}
+    nodeSelector:
+{{ toYaml . | nindent 6 }}
+    {{- end }}
     # an (optional) list of environment variable to be set on the servers
     env:
       - name: JAVA_OPTIONS
@@ -105,6 +109,10 @@ spec:
         {{- end }}
     {{- end }}
     serverPod:
+      {{- with .Values.domain.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
       # an (optional) list of environment variable to be set on the admin servers
       env:
       - name: USER_MEM_ARGS

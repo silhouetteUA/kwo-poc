@@ -256,6 +256,10 @@ releases:
                 app: oracle-xe
             spec:
               serviceAccountName: oracle-xe-sa
+              {{- with .Values.oracledb.nodeSelector }}
+              nodeSelector:
+{{ toYaml . | nindent 16 }}
+              {{- end }}
               initContainers:
                 - name: fix-oradata-permissions
                   image: {{ .Values.oracledb.image }}

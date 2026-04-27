@@ -23,7 +23,7 @@ domain:
    persistenceStore: jdbc
 
    image:
-     repository: image-registry.openshift-image-registry.svc:5000/soans/soasuite_cpu
+     repository: image-registry.openshift-image-registry.svc:5000/openshift/soasuite_cpu
      pullPolicy: IfNotPresent
      tag: 12.2.1.4-jdk8-ol8-251011
    imagePullSecrets:
@@ -44,8 +44,12 @@ domain:
      reclaimPolicy: Delete
      type: pvc
      storageClass: ocs-storagecluster-ceph-rbd
-     volumeMode: Block
-     accessMode: ReadWriteMany
+     volumeMode: Filesystem
+     accessMode: ReadWriteOnce
+
+   # Keep all WebLogic domain pods on one worker node
+   nodeSelector:
+     tenant-role: weblogic
 
    maxManagedServerCount: 5
 
@@ -102,7 +106,7 @@ oracledb:
    namespaceOverride: soans
    # Using internal OpenShift image registry stream
    # Built from: docker.io/gvenzl/oracle-xe:21-slim
-   image: image-registry.openshift-image-registry.svc:5000/soans/oracle-xe:21-slim
+   image: image-registry.openshift-image-registry.svc:5000/openshift/oracle-xe:21-slim
    imagePullSecrets:
    imagePullPolicy: IfNotPresent
    oracle_sid: XE
@@ -120,6 +124,10 @@ oracledb:
      size: 10Gi
      accessMode: "ReadWriteOnce"
      pvcName: oracle-xe-pvc
+
+   # Place Oracle DB pod on a dedicated worker node
+   nodeSelector:
+     tenant-role: oracle-db
 
 # Values for Oracle Database Operator
 dboperator:

@@ -25,6 +25,10 @@ spec:
         - name: {{ .Values.domain.imagePullSecrets }}
       {{- end }}
       serviceAccountName: {{ include "soa-suite.serviceAccountName" . }}
+      {{- with .Values.domain.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.domain.podSecurityContext | nindent 8 }}
       restartPolicy: Never
