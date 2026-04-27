@@ -214,7 +214,14 @@ openshift:
        port: 7001
        path: /em
        tls:
+         termination: edge
          insecureEdgeTerminationPolicy: Allow
+       httpHeaders:
+         request:
+           - name: WL-Proxy-SSL
+             value: "true"
+           - name: X-Forwarded-Proto
+             value: "https"
      
      - name: admin-management
        namespace: soans
@@ -223,7 +230,14 @@ openshift:
        port: 7001
        path: /management
        tls:
+         termination: edge
          insecureEdgeTerminationPolicy: Allow
+       httpHeaders:
+         request:
+           - name: WL-Proxy-SSL
+             value: "true"
+           - name: X-Forwarded-Proto
+             value: "https"
      
      # OSB/SOA routes
      - name: osb-servicebus
@@ -233,7 +247,14 @@ openshift:
        port: 7001
        path: /servicebus
        tls:
+         termination: edge
          insecureEdgeTerminationPolicy: Allow
+       httpHeaders:
+         request:
+           - name: WL-Proxy-SSL
+             value: "true"
+           - name: X-Forwarded-Proto
+             value: "https"
      
      - name: osb-rconsole
        namespace: soans
@@ -242,7 +263,14 @@ openshift:
        port: 7001
        path: /rconsole
        tls:
+         termination: edge
          insecureEdgeTerminationPolicy: Allow
+       httpHeaders:
+         request:
+           - name: WL-Proxy-SSL
+             value: "true"
+           - name: X-Forwarded-Proto
+             value: "https"
      
      - name: osb-poc-app
        namespace: soans
@@ -251,7 +279,14 @@ openshift:
        port: 7001
        path: /poc-app-1.0.0
        tls:
+         termination: edge
          insecureEdgeTerminationPolicy: Allow
+       httpHeaders:
+         request:
+           - name: WL-Proxy-SSL
+             value: "true"
+           - name: X-Forwarded-Proto
+             value: "https"
      
      - name: osb-networking
        namespace: soans
@@ -260,7 +295,14 @@ openshift:
        port: 7001
        path: /BTASNetworkService
        tls:
+         termination: edge
          insecureEdgeTerminationPolicy: Allow
+       httpHeaders:
+         request:
+           - name: WL-Proxy-SSL
+             value: "true"
+           - name: X-Forwarded-Proto
+             value: "https"
 
 # Storage Classes and PVCs for OpenShift
 storageclasses:
