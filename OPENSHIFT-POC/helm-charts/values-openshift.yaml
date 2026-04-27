@@ -19,7 +19,7 @@ domain:
      password: "Welcome1!"
 
    sslEnabled: false
-   javaOptions: "-Dweblogic.StdoutDebugEnabled=false"
+   javaOptions: "-Dweblogic.StdoutDebugEnabled=false -Dweblogic.http.isWLProxyHeadersAccessible=true -Dweblogic.http.isSecureProxy=true"
    persistenceStore: jdbc
 
    image:
@@ -198,7 +198,14 @@ openshift:
        port: 7001
        path: /console
        tls:
+         termination: edge
          insecureEdgeTerminationPolicy: Allow
+       httpHeaders:
+         request:
+           - name: WL-Proxy-SSL
+             value: "true"
+           - name: X-Forwarded-Proto
+             value: "https"
      
      - name: admin-em
        namespace: soans

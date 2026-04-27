@@ -394,8 +394,22 @@ releases:
           port:
             targetPort: {{ .port }}
           tls:
-            insecureEdgeTerminationPolicy: {{ .tls.insecureEdgeTerminationPolicy | default "Allow" }}
-            termination: edge
+            insecureEdgeTerminationPolicy: {{- if and .tls (hasKey .tls "insecureEdgeTerminationPolicy") }} {{ .tls.insecureEdgeTerminationPolicy }}{{- else }} Allow{{- end }}
+            termination: {{- if and .tls (hasKey .tls "termination") }} {{ .tls.termination }}{{- else }} edge{{- end }}
+          {{- if and (hasKey . "httpHeaders") .httpHeaders }}
+          httpHeaders:
+            actions:
+              {{- if and (hasKey .httpHeaders "request") .httpHeaders.request }}
+              request:
+                {{- range .httpHeaders.request }}
+                - name: {{ .name }}
+                  action:
+                    type: Set
+                    set:
+                      value: {{ .value | quote }}
+                {{- end }}
+              {{- end }}
+          {{- end }}
         ---
         {{- end }}
         ROUTES_EOF
