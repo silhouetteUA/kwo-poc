@@ -1,0 +1,18 @@
+# pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-pod
+  namespace: soans
+spec:
+  containers:
+  - name: test-container
+    image: busybox
+    command: [ "sleep", "3600" ]
+    volumeMounts:
+    - mountPath: "/data" # Mount the volume inside the container at /data
+      name: my-volume
+  volumes:
+    - name: my-volume
+      persistentVolumeClaim:
+        claimName: soainfra-domain-pvc

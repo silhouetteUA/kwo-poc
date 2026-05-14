@@ -1,0 +1,167 @@
+# Copilot-generated values based on provided Kubernetes manifests
+# Source manifests: domain.yaml, PV/PVC, oracle_db.yaml, ingress-route-osb.yaml
+
+# Timeout value required to install all the helm releases
+timeout: 3600
+
+# Values for SOA/OSB Domain
+domain:
+   provision: true
+   namespace: soans
+   release_name: soadomain
+   type: osb
+   domainName: soainfra
+   productionMode: true
+   secureEnabled: false
+
+   credentials:
+     secretName: soainfra-domain-credentials
+     username:
+     password:
+
+   sslEnabled: false
+   javaOptions: "-Dweblogic.StdoutDebugEnabled=false"
+   persistenceStore: jdbc
+
+   image:
+     repository: container-registry.oracle.com/middleware/soasuite_cpu
+     pullPolicy: Never
+     tag: 12.2.1.4-jdk8-ol8-251011
+   imagePullSecrets:
+
+   rcuSchema:
+     prefix: SOA
+     profileType: SMALL
+     databaseType: EBR
+     edition: 'ORA$BASE'
+     credentials:
+       secretName:
+       username: "SOA"
+       password: "OraDB1_#OraDB1_#"
+
+   storage:
+     capacity: 5Gi
+     reclaimPolicy: Retain
+     type: hostpath
+     path: /home/jay/kind-data/SOA
+#     nfs:
+#      server: A.B.C.D
+
+   maxManagedServerCount: 5
+
+   admin:
+    name: AdminServer
+    listenPort: 7001
+    sslListenPort: 7002
+    exposeNodePort: true
+    nodePort: 30701
+    administrationPort: 9002
+
+   soaCluster:
+    name: soa_cluster
+    managedServers:
+      count: 1
+      name: soa_server
+      listenPort: 7003
+      sslListenPort: 7004
+      administrationPort: 9004
+
+   osbCluster:
+    name: osb_cluster
+    managedServers:
+      count: 1
+      name: osb_server
+      listenPort: 8002
+      sslListenPort: 8003
+      administrationPort: 9007
+
+   rootDir: /u01/oracle/user_projects
+   scriptDir: /u01/weblogic
+   logHomeEnabled: true
+   logHome: /u01/oracle/user_projects/domains/logs/soainfra
+   includeServerOutInPodLog: true
+   httpAccessLogInLogHome: true
+   serverStartPolicy: IfNeeded
+   serviceAccount:
+     create: true
+     annotations: {}
+     name: ""
+
+# Values required for Database
+# oracle_db.yaml is already deployed as a standalone manifest in namespace soans.
+oracledb:
+   provision: false
+   namespaceOverride: soans
+   image: docker.io/gvenzl/oracle-xe:21-slim
+   imagePullSecrets:
+   oracle_sid: XE
+   oracle_pdb: XEPDB1
+   oracle_characterset: AL32UTF8
+   oracle_edition: enterprise
+   url: oracle-db.soans.svc.cluster.local:1521/XEPDB1
+   credentials:
+     secretName: oracle-xe-secret
+     username: SYS
+     password: "Welcome1!"
+   persistence:
+     storageClass: standard
+     size: 5Gi
+     accessMode: "ReadWriteOnce"
+     volumeName: ""
+
+# Values for Oracle Database Operator
+dboperator:
+   provision: false
+   namespace: oracle-database-operator-system
+   release_name: oracledb-operator
+   version: latest
+
+# Values for cert-manager required for Oracle Database Operator
+certmanager:
+   provision: false
+   namespace: cert-manager
+   release_name: cert-manager
+   version: v1.13.0
+
+# Values for WebLogic Kubernetes Operator
+wlsoperator:
+   provision: true
+   namespace: opns
+   release_name: weblogic-operator
+   version: 4.2.9
+   javaLoggingLevel: "WARNING"
+
+# Values for Loadbalancer. Supports NGINX and TRAEFIK
+# ingress-route-osb.yaml is already supplied as a standalone Traefik IngressRoute.
+loadbalancer:
+   provision: false
+   type: TRAEFIK
+   namespace: soalbns
+   release_name: soalb
+   sslType: E2ESSL
+   hostname: soasuite.domain.org
+   certCommonName: "*.domain.org"
+   e2ehostName:
+     admin: admin.domain.org
+     soa: soa.domain.org
+     osb: osb.domain.org
+
+# Customize the NGINX controller helm charts default values.
+nginx:
+   controller:
+     service:
+       type: NodePort
+     admissionWebhooks:
+       enabled: false
+     allowSnippetAnnotations: true
+     image:
+       allowPrivilegeEscalation: true
+
+# Customize the TRAEFIK controller helm chart default values
+traefik:
+   image:
+     registry: docker.io
+     repository: traefik
+     tag: ""
+   service:
+     type: NodePort

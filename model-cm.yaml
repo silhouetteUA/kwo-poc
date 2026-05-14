@@ -1,0 +1,45 @@
+topology:
+  Name: soainfra
+
+resources:
+  # -------------------------
+  # JDBC Data Source (POC)
+  # -------------------------
+  JDBCSystemResource:
+    TestDataSource:
+      # Target to your runtime cluster (not AdminServer)
+      Target: AdminServer
+      JdbcResource:
+        JDBCDriverParams:
+          # Replace with your DB host/SID/Service
+          URL: jdbc:oracle:thin:@//exa013ldc-npe2.rci.rogers.com:1531/ESBAP9QA_SN
+          DriverName: oracle.jdbc.OracleDriver
+          # POC-only: plain text password
+          Password: RogerS#2023$
+          Properties:
+            user:
+              Value: QA9APPESB
+        JDBCDataSourceParams:
+          # JNDI name your apps will use
+          JNDIName: jdbc/TestDS
+        JDBCConnectionPoolParams:
+          # Simple validation query
+          TestTableName: SQL SELECT 1 FROM DUAL
+
+  # # -------------------------
+  # # JMS Module (CF + Queue)
+  # # -------------------------
+  # JMSSystemResource:
+  #   TestJmsModule:
+  #     # Target JMS module to the cluster
+  #     Target: AdminServer
+  #     JMSResource:
+  #       ConnectionFactory:
+  #         TestConnectionFactory:
+  #           JNDIName: jms/TestCF
+  #           # Let WLS auto-target to the server(s) in the module target
+  #           DefaultTargetingEnabled: true
+  #       Queue:
+  #         TestQueue:
+  #           JNDIName: jms/TestQueue
+  #           DefaultTargetingEnabled: true

@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: oracle-xe-pvc
+  namespace: soans
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: ocs-storagecluster-ceph-rbd
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oracle-xe-secret
+  namespace: soans
+type: Opaque
+stringData:
+  ORACLE_PASSWORD: "Welcome1!"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oracle-xe
+  namespace: soans
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oracle-xe
+  template:
+    metadata:
+      labels:
+        app: oracle-xe
+    spec:
+      initContainers:
+      - name: fix-oradata-permissions
+        image: image-registry.openshift-image-registry.svc:5000/soans/oracle-xe:21-slim
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+        command:
+          - /bin/bash
+          - -c
+          - |
+            chown -R 54321:54321 /opt/oracle/oradata || true
+            chmod -R ug+rwX /opt/oracle/oradata || true
+        volumeMounts:
+          - name: oradata
+            mountPath: /opt/oracle/oradata
+      containers:
+        - name: oracle-xe
+          image: image-registry.openshift-image-registry.svc:5000/soans/oracle-xe:21-slim
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: sql
+              containerPort: 1521
+          env:
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-xe-secret
+                  key: ORACLE_PASSWORD
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "4Gi"
+          volumeMounts:
+            - name: oradata
+              mountPath: /opt/oracle/oradata
+          startupProbe:
+            tcpSocket:
+              port: 1521
+            failureThreshold: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 1521
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: 1521
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 6
+      volumes:
+        - name: oradata
+          persistentVolumeClaim:
+            claimName: oracle-xe-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oracle-db
+  namespace: soans
+spec:
+  type: ClusterIP
+  selector:
+    app: oracle-xe
+  ports:
+    - name: sql
+      port: 1521
+      targetPort: 1521

@@ -1,0 +1,24 @@
+# Copyright (c) 2024, Oracle Corporation and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .Values.domain.domainName }}-domain-pvc
+  labels:
+    weblogic.domainUID: {{ .Values.domain.domainName }}
+spec:
+  {{- if eq .Values.domain.storage.type "pvc" }}
+  storageClassName: {{ .Values.domain.storage.storageClass | default "ocs-storagecluster-ceph-rbd" }}
+  volumeMode: {{ .Values.domain.storage.volumeMode | default "Filesystem" }}
+  accessModes:
+    - {{ .Values.domain.storage.accessMode | default "ReadWriteOnce" }}
+  {{- else }}
+  storageClassName: {{ .Values.domain.domainName }}-domain-storage-class
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.domain.storage.capacity }}

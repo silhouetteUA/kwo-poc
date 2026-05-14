@@ -1,0 +1,26 @@
+# pv.yaml
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: weblogic-pv
+# spec:
+#   capacity:
+#     storage: 1Gi
+#   accessModes:
+#     - ReadWriteOnce # Allows the volume to be mounted as read/write by a single node
+#   persistentVolumeReclaimPolicy: Retain # Retains data even after the PVC is deleted
+#   # storageClassName: standard
+---
+# pvc.yaml NO NEED to have PV, as OpenShift will dynamically provide storage from the storage class
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: weblogic-pvc
+  namsespace: soans
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: ocs-storagecluster-ceph-rbd
